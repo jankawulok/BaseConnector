@@ -1,0 +1,169 @@
+{
+    "product_path": "product",
+    "mappings": {
+        "id": {
+            "path": "id"
+        },
+        "sku": {
+            "path": "sku"
+        },
+        "ean": {
+            "path": "ean"
+        },
+        "name": {
+            "path": "name",
+            "template": "{{ value|trim }}"
+        },
+        "quantity": {
+            "path": "stock",
+            "template": "{{ value|default(0)|round }}"
+        },
+        "price": {
+            "path": "price",
+            "template": "{{ value|replace({',': '.'})|float }}"
+        },
+        "currency": {
+            "path": "currency",
+            "template": "{{ value|upper|default('USD') }}"
+        },
+        "tax": {
+            "path": "vat",
+            "template": "{{ value|default(0)|round }}"
+        },
+        "weight": {
+            "path": "weight",
+            "template": "{{ value|replace({',': '.'})|float }}"
+        },
+        "height": {
+            "path": "height",
+            "template": "{{ value|replace({',': '.'})|float }}"
+        },
+        "length": {
+            "path": "length",
+            "template": "{{ value|replace({',': '.'})|float }}"
+        },
+        "width": {
+            "path": "width",
+            "template": "{{ value|replace({',': '.'})|float }}"
+        },
+        "description": {
+            "path": "description",
+            "template": "{{ value|striptags|trim }}"
+        },
+        "description_extra1": {
+            "path": "description_extra1",
+            "template": "{{ value|striptags|trim }}"
+        },
+        "description_extra2": {
+            "path": "description_extra2",
+            "template": "{{ value|striptags|trim }}"
+        },
+        "description_extra3": {
+            "path": "description_extra3",
+            "template": "{{ value|striptags|trim }}"
+        },
+        "description_extra4": {
+            "path": "description_extra4",
+            "template": "{{ value|striptags|trim }}"
+        },
+        "man_name": {
+            "path": "manufacturer",
+            "template": "{{ value|trim }}"
+        },
+        "location": {
+            "path": "location",
+            "template": "{{ value|trim }}"
+        },
+        "url": {
+            "path": "url",
+            "template": "{{ value|trim }}"
+        },
+        "images": {
+            "path": "images/image",
+            "template": "{{ value|split(',')|map(image => image|trim)|filter(image => image != '')|json_encode() }}"
+        },
+        "features": {
+            "path": "features/feature",
+            "mappings": {
+                "name": {
+                    "path": "name"
+                },
+                "value": {
+                    "path": "value"
+                }
+            }
+        },
+        "delivery_time": {
+            "path": "delivery_time",
+            "template": "{{ value|default(1)|round }}"
+        },
+        "categories": {
+            "path": "categories/category",
+            "mappings": {
+                "id": {
+                    "path": "id"
+                },
+                "name": {
+                    "path": "name"
+                }
+            }
+        },
+        "variants": {
+            "path": "variants/variant",
+            "mappings": {
+                "full_name": {
+                    "path": "full_name",
+                    "template": "{{ value|default(raw.name ~ ' ' ~ name)|trim }}"
+                },
+                "name": {
+                    "path": "name",
+                    "template": "{{ value|default('')|trim }}"
+                },
+                "price": {
+                    "path": "price",
+                    "template": "{{ value|default(raw.price)|replace({',': '.'})|float }}"
+                },
+                "quantity": {
+                    "path": "quantity",
+                    "template": "{{ value|default(0)|round }}"
+                },
+                "sku": {
+                    "path": "sku",
+                    "template": "{{ value|default(raw.sku ~ '-' ~ loop.index)|trim }}"
+                },
+                "ean": {
+                    "path": "ean",
+                    "template": "{{ value|default('')|trim }}"
+                },
+                "features": {
+                    "path": "features",
+                    "template": "{{ value|split(',')|map(f => f|split(':'))|filter(f => f|length >= 2)|map(f => {(f[0]|trim): f[1]|trim})|json_encode() }}"
+                },
+                "images": {
+                    "path": "images",
+                    "template": "{{ value|split(',')|map(img => img|trim)|filter(img => img != '')|json_encode() }}"
+                },
+                "weight": {
+                    "path": "weight",
+                    "template": "{{ value|default(raw.weight)|replace({',': '.'})|float }}"
+                },
+                "height": {
+                    "path": "height",
+                    "template": "{{ value|default(raw.height)|replace({',': '.'})|float }}"
+                },
+                "length": {
+                    "path": "length",
+                    "template": "{{ value|default(raw.length)|replace({',': '.'})|float }}"
+                },
+                "width": {
+                    "path": "width",
+                    "template": "{{ value|default(raw.width)|replace({',': '.'})|float }}"
+                },
+                "tax": {
+                    "path": "tax",
+                    "template": "{{ value|default(raw.tax)|round }}"
+                }
+            }
+        }
+    }
+}

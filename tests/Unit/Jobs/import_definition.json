@@ -1,0 +1,143 @@
+{
+    "product_path": "//product",
+    "id": {
+        "path": "id"
+    },
+    "sku": {
+        "path": "sku"
+    },
+    "ean": {
+        "path": "ean"
+    },
+    "name": {
+        "path": "name",
+        "template": "{{ value|trim }}"
+    },
+    "quantity": {
+        "path": "stock",
+        "template": "{{ value|default(0)|round }}"
+    },
+    "price": {
+        "path": "price",
+        "template": "{{ value|replace({',': '.'})|float }}"
+    },
+    "currency": {
+        "path": "currency",
+        "template": "{{ value|upper|default('USD') }}"
+    },
+    "tax": {
+        "path": "vat",
+        "template": "{{ value|default(0)|round }}"
+    },
+    "weight": {
+        "path": "weight",
+        "template": "{{ value|replace({',': '.'})|float }}"
+    },
+    "height": {
+        "path": "height",
+        "template": "{{ value|replace({',': '.'})|float }}"
+    },
+    "length": {
+        "path": "length",
+        "template": "{{ value|replace({',': '.'})|float }}"
+    },
+    "width": {
+        "path": "width",
+        "template": "{{ value|replace({',': '.'})|float }}"
+    },
+    "description": {
+        "path": "description",
+        "template": "{{ value|striptags|trim }}"
+    },
+    "description_extra1": {
+        "path": "description_extra1",
+        "template": "{{ value|striptags|trim }}"
+    },
+    "description_extra2": {
+        "path": "description_extra2",
+        "template": "{{ value|striptags|trim }}"
+    },
+    "description_extra3": {
+        "path": "description_extra3",
+        "template": "{{ value|striptags|trim }}"
+    },
+    "description_extra4": {
+        "path": "description_extra4",
+        "template": "{{ value|striptags|trim }}"
+    },
+    "man_name": {
+        "path": "manufacturer",
+        "template": "{{ value|trim }}"
+    },
+    "location": {
+        "path": "location",
+        "template": "{{ value|trim }}"
+    },
+    "url": {
+        "path": "url",
+        "template": "{{ value|trim }}"
+    },
+    "images": {
+        "path": "images/image",
+        "template": "{{ value|split(',')|map(image => image|trim)|filter(image => image != '')|json_encode() }}"
+    },
+    "features": {
+        "path": "features/feature",
+        "template": {% raw %}"{% set features = [] %}
+        {% for feature in value|split(';') %}
+            {% set parts = feature|split(':') %}
+            {% if parts|length >= 2 %}
+                {% set feature_values = parts[1]|split('|')|map(v => v|trim) %}
+                {% set features = features|merge([{(parts[0]|trim): feature_values|join(' | ')}]) %}
+            {% endif %}
+        {% endfor %}
+        {{ features|json_encode() }}"{% endraw %}
+    },
+    "delivery_time": {
+        "path": "delivery_time",
+        "template": "{{ value|default(1)|round }}"
+    },
+    "categories": {
+        "path": "categories/category",
+        "template": {% raw %}"{% set categories = [] %}
+        {% for category in value|split(';') %}
+            {% set cat_parts = category|split('|') %}
+            {% if cat_parts|length >= 2 %}
+                {% set categories = categories|merge([{
+                    'id': cat_parts[0]|trim,
+                    'name': cat_parts[1]|trim
+                }]) %}
+            {% endif %}
+        {% endfor %}
+        {{ categories|json_encode() }}"{% endraw %}
+    },
+    "variants": {
+        "path": "variants/variant",
+        "template": {% raw %}"{% set variants = [] %}
+        {% for variant in value|split(';') %}
+            {% set variant_data = {
+                'full_name': variant.full_name|default(raw.name ~ ' ' ~ variant.name)|trim,
+                'name': variant.name|default(''),
+                'price': variant.price|default(raw.price)|replace({',': '.'})|float,
+                'quantity': variant.quantity|default(0)|round,
+                'sku': variant.sku|default(raw.sku ~ '-' ~ loop.index),
+                'ean': variant.ean|default(''),
+                'features': (variant.features|default(''))|split(',')
+                    |map(f => f|split(':'))
+                    |filter(f => f|length >= 2)
+                    |map(f => {(f[0]|trim): f[1]|trim})
+                    |json_encode,
+                'images': (variant.images|default(''))|split(',')
+                    |map(img => img|trim)
+                    |filter(img => img != '')
+                    |json_encode,
+                'weight': variant.weight|default(raw.weight)|replace({',': '.'})|float,
+                'height': variant.height|default(raw.height)|replace({',': '.'})|float,
+                'length': variant.length|default(raw.length)|replace({',': '.'})|float,
+                'width': variant.width|default(raw.width)|replace({',': '.'})|float
+            } %}
+            {% set variants = variants|merge([variant_data]) %}
+        {% endfor %}
+        {{ variants|json_encode() }}"{% endraw %}
+    }
+}
