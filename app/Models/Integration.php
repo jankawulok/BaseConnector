@@ -75,15 +75,36 @@ class Integration extends Model
 
     private function isScheduleDue(string $schedule, ?\DateTime $lastRun): bool
     {
+        \Log::info("Checking schedule: {$schedule} for last run: " . ($lastRun ? $lastRun->format('Y-m-d H:i:s') : 'never'), ['integration_id' => $this->id]);
 
         try {
-            $cron = new \Cron\CronExpression($schedule);
-            if ($lastRun === null) {
-                return true;
+            // Validate the cron expression format
+            if (!\Cron\CronExpression::isValidExpression($schedule)) {
+                \Log::error('Invalid cron expression format: ' . $schedule, ['integration_id' => $this->id]);
+                return false;
             }
-            return $cron->isDue($lastRun);
+
+            $cron = new \Cron\CronExpression($schedule);
+
+            // If lastRun is null, log and return true
+            if ($lastRun === null) {
+                \Log::info("No last run time found, schedule is due.", ['integration_id' => $this->id]);
+                return true; // Return true if there's no last run time
+            }
+
+            // Set seconds to zero to ignore them
+            $lastRun->setTime($lastRun->format('H'), $lastRun->format('i'), 0);
+
+            // Log the last run time before checking
+            \Log::info('Last run time (seconds ignored): ' . $lastRun->format('Y-m-d H:i:s'), ['integration_id' => $this->id]);
+
+            // Check if the cron job is due
+            $isDue = $cron->isDue();
+            \Log::info("Is due?: " . ($isDue ? 'true' : 'false') . " Next run: " . $cron->getNextRunDate()->format('H:i:s'), ['integration_id' => $this->id]);
+
+            return $isDue;
         } catch (\Exception $e) {
-            \Log::error('Invalid cron expression: ' . $e->getMessage());
+            \Log::error('Error evaluating cron expression: ' . $e->getMessage(), ['integration_id' => $this->id]);
             return false;
         }
     }

@@ -10,12 +10,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // Run integration syncs every minute
-        $schedule->command('integrations:sync')
-            ->everyMinute()
-            ->withoutOverlapping();
-
-        // Make sure queue worker is running
-        $schedule->command('queue:work --stop-when-empty')
+        $schedule->command('integrations:dispatch')
             ->everyMinute()
             ->withoutOverlapping();
 

@@ -7,3 +7,21 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+  queue-worker:
+    build:
+      context: .
+    entrypoint: php artisan queue:work --tries=3
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    depends_on:
+      - frankenphp
+  scheduler:
+    build:
+      context: .
+    entrypoint: /bin/sh -c "while true; do php artisan integrations:dispatch >> /dev/null 2>&1; sleep 60; done"
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    depends_on:
+      - frankenphp
