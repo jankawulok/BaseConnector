@@ -5,5 +5,7 @@ RUN install-php-extensions \
     # Add other PHP extensions here...
 
 COPY . /app
+RUN frankenphp php-cli artisan optimize
+
 
 ENTRYPOINT ["php", "artisan", "octane:frankenphp"]
