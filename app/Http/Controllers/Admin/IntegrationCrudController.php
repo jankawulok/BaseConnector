@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Integration;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\Widget;
 use App\Jobs\ImportIntegrationFeed;
 use App\Models\Product;
 use Alert;
@@ -22,6 +23,11 @@ class IntegrationCrudController extends CrudController
         CRUD::setModel(Integration::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/integration');
         CRUD::setEntityNameStrings('integration', 'integrations');
+
+        Widget::add([
+            'type' => 'view',
+            'view' => 'admin.integration.scripts',
+        ]);
 
         // Add custom buttons
         $this->crud->addButtonFromView('line', 'sync_full', 'sync_full', 'beginning');
@@ -71,7 +77,7 @@ class IntegrationCrudController extends CrudController
         CRUD::column('enabled')->type('boolean');
         CRUD::column('products_count')
             ->type('closure')
-            ->function(function($entry) {
+            ->function(function ($entry) {
                 return $entry->products()->count();
             })
             ->label('Products');
@@ -148,27 +154,40 @@ class IntegrationCrudController extends CrudController
 
     protected function setupShowOperation()
     {
+        $this->crud->set('show.tabsEnabled', true);
+        $this->crud->setShowContentClass('col-md-12');
         $this->setupListOperation();
+
+        // Assign basic columns to Info tab
+        foreach ($this->crud->columns() as $column) {
+            $this->crud->modifyColumn($column['name'], ['tab' => 'Info']);
+        }
 
         // Add Products list
         CRUD::addColumn([
             'name' => 'products',
             'type' => 'view',
-            'view' => 'vendor.backpack.crud.columns.products_list'
+            'view' => 'vendor.backpack.crud.columns.products_list',
+            'tab' => 'Products',
+            'size' => 12
         ]);
 
         // Add logs
         CRUD::addColumn([
             'name' => 'logs',
             'type' => 'view',
-            'view' => 'vendor.backpack.crud.columns.integration_logs'
+            'view' => 'vendor.backpack.crud.columns.integration_logs',
+            'tab' => 'Logs',
+            'size' => 12
         ]);
 
         // Add alerts
         CRUD::addColumn([
             'name' => 'alerts',
             'type' => 'view',
-            'view' => 'vendor.backpack.crud.columns.integration_alerts'
+            'view' => 'vendor.backpack.crud.columns.integration_alerts',
+            'tab' => 'Alerts',
+            'size' => 12
         ]);
     }
 }

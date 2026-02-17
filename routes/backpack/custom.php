@@ -24,15 +24,20 @@ Route::group([
         'uses' => 'ProductHistoryCrudController@getHistory',
         'operation' => 'list'
     ]);
+
+    // Integration actions
+    Route::get('integration/{id}/sync-full', 'IntegrationCrudController@syncFull')->name('integration.sync-full');
+    Route::get('integration/{id}/sync-light', 'IntegrationCrudController@syncLight')->name('integration.sync-light');
+    Route::get('integration/{id}/cleanup', 'IntegrationCrudController@cleanup')->name('integration.cleanup');
 });
 
 Route::group([
-    'prefix'     => config('backpack.base.route_prefix', 'admin'),
+    'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' => array_merge(
         (array) config('backpack.base.web_middleware', 'web'),
         (array) config('backpack.base.middleware_key', 'admin')
     ),
-    'namespace'  => 'App\Http\Controllers\Admin',
+    'namespace' => 'App\Http\Controllers\Admin',
 ], function () {
     Route::crud('alert', 'AlertCrudController');
 });

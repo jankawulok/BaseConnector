@@ -215,7 +215,6 @@ class ImportIntegrationFeed implements ShouldQueue
         // For light sync, fall back to full import definition if light is empty
         if ($type === 'light' && empty($rawDefinition)) {
             $rawDefinition = $this->integration->full_import_definition;
-            $this->type = 'full'; // Switch to full sync mode
         }
 
         // Ensure we have a valid array
@@ -263,22 +262,22 @@ class ImportIntegrationFeed implements ShouldQueue
 
         try {
             $pathParts = explode('/', $this->importDefinition['product_path']);
-                $currentPath = '';
+            $currentPath = '';
 
-                // Move to each part of the path
-                foreach ($pathParts as $part) {
+            // Move to each part of the path
+            foreach ($pathParts as $part) {
 
-                    while ($reader->read()) {
+                while ($reader->read()) {
 
-                        if ($reader->nodeType == XMLReader::ELEMENT && $reader->name === $part) {
-                            $currentPath .= '/' . $part;
-                            if ($currentPath === '/' . $this->importDefinition['product_path']) {
-                                break 2; // Found the full path
-                            }
-                            break;
+                    if ($reader->nodeType == XMLReader::ELEMENT && $reader->name === $part) {
+                        $currentPath .= '/' . $part;
+                        if ($currentPath === '/' . $this->importDefinition['product_path']) {
+                            break 2; // Found the full path
                         }
+                        break;
                     }
                 }
+            }
             do {
                 // Split path into parts
 
@@ -310,14 +309,14 @@ class ImportIntegrationFeed implements ShouldQueue
                 'sync_type' => $this->type
             ]);
             // Update last sync timestamp
-        $timestampField = $this->type === 'full' ? 'last_full_sync' : 'last_light_sync';
-        $this->integration->update([$timestampField => now()]);
+            $timestampField = $this->type === 'full' ? 'last_full_sync' : 'last_light_sync';
+            $this->integration->update([$timestampField => now()]);
 
-        Log::channel('database')->info('Feed import completed successfully', [
-            'integration_id' => $this->integration->id,
-            'products_processed' => count($this->processedIds),
-            'sync_type' => $this->type
-        ]);
+            Log::channel('database')->info('Feed import completed successfully', [
+                'integration_id' => $this->integration->id,
+                'products_processed' => count($this->processedIds),
+                'sync_type' => $this->type
+            ]);
         } catch (\Throwable $e) {
             Log::channel('database')->error('Feed import failed', [
                 'integration_id' => $this->integration->id,
@@ -375,9 +374,11 @@ class ImportIntegrationFeed implements ShouldQueue
                 $currentVariants = json_decode($product->variants ?? '[]', true);
 
                 foreach ($productData['variants'] as $variantId => $variantData) {
-                    if (isset($currentVariants[$variantId]) &&
+                    if (
+                        isset($currentVariants[$variantId]) &&
                         isset($variantData['price']) &&
-                        $currentVariants[$variantId]['price'] != $variantData['price']) {
+                        $currentVariants[$variantId]['price'] != $variantData['price']
+                    ) {
 
                         // Track variant price changes
                         $this->trackFieldChange(
@@ -624,12 +625,12 @@ class ImportIntegrationFeed implements ShouldQueue
                         $itemData = [];
                         foreach ($config['mappings'] as $subField => $subConfig) {
                             $value = $node->xpath($subConfig['path'])[0] ?? '';
-                            $value = is_array($value) ? implode('|', $value) : (string)$value;
+                            $value = is_array($value) ? implode('|', $value) : (string) $value;
                             // Convert numeric values before template processing
                             if (in_array($field, ['price', 'quantity', 'tax', 'weight'])) {
                                 $value = str_replace(',', '.', $value);
                                 if (is_numeric($value)) {
-                                    $value = (float)$value;
+                                    $value = (float) $value;
                                 }
                             }
                             if (isset($subConfig['template'])) {
@@ -644,7 +645,7 @@ class ImportIntegrationFeed implements ShouldQueue
                             $itemData[$subField] = $value;
                         }
                         if ($field === 'features') {
-                            if(array_key_exists('name', $itemData) && array_key_exists('value', $itemData)) {
+                            if (array_key_exists('name', $itemData) && array_key_exists('value', $itemData)) {
                                 $nestedData[] = [
                                     $itemData['name'],
                                     $itemData['value']
@@ -681,7 +682,7 @@ class ImportIntegrationFeed implements ShouldQueue
                             }
                         } else {
                             // Single node, get string value
-                            $value = (string)$nodes[0];
+                            $value = (string) $nodes[0];
                         }
                     }
 
@@ -754,7 +755,7 @@ class ImportIntegrationFeed implements ShouldQueue
                             $variantData = [];
                             foreach ($config['mappings'] as $subField => $subConfig) {
                                 $value = $node->xpath($subConfig['path'])[0] ?? '';
-                                $value = (string)$value;
+                                $value = (string) $value;
 
                                 if (isset($subConfig['template'])) {
                                     $loader->setTemplate('template', $subConfig['template']);
@@ -780,7 +781,7 @@ class ImportIntegrationFeed implements ShouldQueue
                     $value = '';
 
                     if ($nodes) {
-                        $value = (string)$nodes[0];
+                        $value = (string) $nodes[0];
                     }
 
                     if (isset($config['template'])) {
@@ -802,7 +803,7 @@ class ImportIntegrationFeed implements ShouldQueue
                     // Convert numeric values
                     if (in_array($field, ['price', 'quantity'])) {
                         $value = str_replace(',', '.', $value);
-                        $value = is_numeric($value) ? (float)$value : 0;
+                        $value = is_numeric($value) ? (float) $value : 0;
                     }
 
                     $productData[$field] = $value;
@@ -987,8 +988,8 @@ class ImportIntegrationFeed implements ShouldQueue
         try {
             // Find all products for this integration that weren't in the XML
             $missingProducts = Product::where('integration_id', $this->integration->id)
-                                    ->whereNotIn('id', $this->processedIds)
-                                    ->get();
+                ->whereNotIn('id', $this->processedIds)
+                ->get();
 
             foreach ($missingProducts as $product) {
                 // Track quantity change if it's not already 0

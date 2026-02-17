@@ -22,7 +22,8 @@
                         <tr>
                             <td>{{ $log->created_at->format('Y-m-d H:i:s') }}</td>
                             <td>
-                                <span class="badge badge-{{ $log->level === 'error' ? 'danger' : ($log->level === 'warning' ? 'warning' : 'info') }}">
+                                <span
+                                    class="badge badge-{{ $log->level === 'error' ? 'danger' : ($log->level === 'warning' ? 'warning' : 'info') }}">
                                     {{ ucfirst($log->level) }}
                                 </span>
                             </td>
@@ -42,7 +43,7 @@
             </table>
 
             <div class="p-3">
-                {{ $logs->links() }}
+                {{ $logs->fragment('tab_logs')->links() }}
             </div>
         </div>
     </div>

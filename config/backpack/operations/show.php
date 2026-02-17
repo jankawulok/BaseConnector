@@ -26,4 +26,7 @@ return [
 
     // When using tabbed forms (create & update), what kind of tabs would you like?
     'tabsType' => 'horizontal', //options: horizontal, vertical
+
+    // Which component to use for displaying the Show page?
+    'component' => 'bp-datagrid', // options: bp-datagrid, bp-datalist, or a custom component alias
 ];
