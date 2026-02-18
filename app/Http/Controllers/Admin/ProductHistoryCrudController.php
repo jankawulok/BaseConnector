@@ -23,21 +23,30 @@ class ProductHistoryCrudController extends CrudController
         CRUD::column('product')
             ->type('custom_html')
             ->label('Product')
-            ->value(function($entry) {
+            ->value(function ($entry) {
                 $product = $entry->product;
-                if (!$product) return 'Product deleted';
+                if (!$product)
+                    return 'Product deleted';
 
                 return sprintf(
-                    '<strong>%s</strong><br>ID: %s<br>SKU: %s',
+                    '<strong>%s</strong><br>%s<br><small>ID: %s | SKU: %s</small>',
                     $product->integration->name ?? 'Unknown Integration',
+                    $product->name,
                     $product->id,
                     $product->sku
                 );
+            })
+            ->searchLogic(function ($query, $column, $searchTerm) {
+                $query->orWhereHas('product', function ($q) use ($searchTerm) {
+                    $q->where('sku', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('id', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('name', 'like', '%' . $searchTerm . '%');
+                });
             });
 
         CRUD::column('field_name');
-        CRUD::column('old_value');
-        CRUD::column('new_value');
+        CRUD::column('old_value')->type('text');
+        CRUD::column('new_value')->type('text');
         CRUD::column('variant_id')
             ->type('text')
             ->label('Variant');
@@ -49,13 +58,17 @@ class ProductHistoryCrudController extends CrudController
     {
         $entry = $this->crud->getCurrentEntry();
 
+        CRUD::set('show.contentClass', 'col-md-12');
+
         // Product Information
         CRUD::column('product')
             ->type('custom_html')
             ->label('Product Details')
-            ->value(function($entry) {
+            ->size(12)
+            ->value(function ($entry) {
                 $product = $entry->product;
-                if (!$product) return 'Product deleted';
+                if (!$product)
+                    return 'Product deleted';
 
                 return view('vendor.backpack.crud.columns.product_details', [
                     'product' => $product,
@@ -67,6 +80,7 @@ class ProductHistoryCrudController extends CrudController
         CRUD::column('price_history')
             ->type('view')
             ->label('Price History')
+            ->size(12)
             ->view('vendor.backpack.crud.columns.history_graph')
             ->with([
                 'entry' => $entry,
@@ -78,6 +92,7 @@ class ProductHistoryCrudController extends CrudController
         CRUD::column('quantity_history')
             ->type('view')
             ->label('Quantity History')
+            ->size(12)
             ->view('vendor.backpack.crud.columns.history_graph')
             ->with([
                 'entry' => $entry,
@@ -89,6 +104,7 @@ class ProductHistoryCrudController extends CrudController
         CRUD::column('changes')
             ->type('view')
             ->label('All Changes')
+            ->size(12)
             ->view('vendor.backpack.crud.columns.product_history_table');
     }
 

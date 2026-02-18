@@ -242,6 +242,12 @@ class ImportIntegrationFeed implements ShouldQueue
         $this->feedUrl = $type === 'full'
             ? $this->integration->full_feed_url
             : ($this->integration->light_feed_url ?? $this->integration->full_feed_url);
+
+        Log::info('ImportIntegrationFeed initialized', [
+            'integration_name' => $this->integration->name,
+            'type' => $this->type,
+            'feed_url' => $this->feedUrl
+        ]);
     }
 
     /**
@@ -251,13 +257,15 @@ class ImportIntegrationFeed implements ShouldQueue
      */
     public function handle()
     {
-        $reader = new XMLReader();// Download the feed to a temporary file
+        Log::info('ImportIntegrationFeed starting', [
+            'integration_id' => $this->integration->id,
+            'type' => $this->type
+        ]);
+
         $tempFilePath = $this->downloadFeedToTempFile($this->feedUrl);
-        // Process the XML content
+
         $reader = new XMLReader();
         $reader->open($tempFilePath);
-        // Validate XML before processing
-        // Need to read first node before checking validity
 
 
         try {
@@ -829,7 +837,9 @@ class ImportIntegrationFeed implements ShouldQueue
             if (empty($productData['id']) || empty($productData['name'])) {
                 Log::warning('Skipping product due to missing required fields', [
                     'integration_id' => $this->integration->id,
-                    'product_id' => $productData['id']
+                    'product_id' => $productData['id'] ?? 'MISSING',
+                    'product_name' => $productData['name'] ?? 'MISSING',
+                    'sync_type' => $this->type
                 ]);
                 return null;
             }
