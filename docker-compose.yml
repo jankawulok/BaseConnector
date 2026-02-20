@@ -1,27 +1,15 @@
 services:
-  frankenphp:
+  baseconnector:
     build:
       context: .
-    entrypoint: php artisan octane:frankenphp --workers=1 --max-requests=1
     ports:
-      - "8000:8000"
+      - "80:80"
     volumes:
-      - .:/app
-  queue-worker:
-    build:
-      context: .
-    entrypoint: php artisan queue:work --tries=3
+      - baseconnector-data:/data
+    environment:
+      - APP_URL=${APP_URL:-http://localhost}
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
     restart: unless-stopped
-    volumes:
-      - .:/app
-    depends_on:
-      - frankenphp
-  scheduler:
-    build:
-      context: .
-    entrypoint: /bin/sh -c "while true; do php artisan integrations:dispatch >> /dev/null 2>&1; sleep 60; done"
-    restart: unless-stopped
-    volumes:
-      - .:/app
-    depends_on:
-      - frankenphp
+
+volumes:
+  baseconnector-data:
