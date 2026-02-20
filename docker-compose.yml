@@ -2,14 +2,18 @@ services:
   baseconnector:
     build:
       context: .
+      dockerfile: Dockerfile
+    container_name: baseconnector
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - baseconnector-data:/data
+      - app-storage:/app/storage
     environment:
       - APP_URL=${APP_URL:-http://localhost}
       - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
-    restart: unless-stopped
+
 
 volumes:
-  baseconnector-data:
+  app-storage:
