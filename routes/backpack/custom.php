@@ -1,21 +1,23 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-Route::get('dashboard', [\App\Http\Controllers\Admin\IntegrationCrudController::class, 'index'])->name('admin.dashboard');
 
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
 // This route file is loaded automatically by Backpack\CRUD.
 // Routes you generate using Backpack\Generators will be placed here.
+
 Route::group([
     'prefix' => config('backpack.base.route_prefix'),
     'middleware' => ['web', 'admin'],
     'namespace' => 'App\Http\Controllers\Admin'
 ], function () {
+    Route::get('dashboard', 'DashboardController@index')->name('admin.dashboard');
     Route::crud('integration', 'IntegrationCrudController');
     Route::crud('product-history', 'ProductHistoryCrudController');
     Route::crud('log', 'LogCrudController');
+    Route::crud('user', 'UserCrudController');
 
     // Add the product show route
     Route::get('product/{productAutoId}', 'ProductController@show')->name('product.show');
@@ -41,7 +43,3 @@ Route::group([
 ], function () {
     Route::crud('alert', 'AlertCrudController');
 });
-
-/**
- * DO NOT ADD ANYTHING HERE.
- */

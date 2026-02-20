@@ -194,7 +194,7 @@ return [
     'token_username' => env('BACKPACK_TOKEN_USERNAME', false),
 
     // Set the default path for admin users
-    'dashboard_url' => 'admin/integration',
+    'dashboard_url' => 'admin/dashboard',
 
     // Disable the default dashboard
     'show_getting_started' => false,
@@ -205,6 +205,6 @@ return [
     'home_link' => 'admin/integration',
 
     // The developer through which backpack notifications will be sent
-    'developer_name' => env('APP_DEVELOPER_NAME', 'Developer'),
-    'developer_link' => env('APP_DEVELOPER_LINK', 'http://localhost'),
+    'developer_name' => env('APP_DEVELOPER_NAME', 'Jan Kawulok'),
+    'developer_link' => env('APP_DEVELOPER_LINK', 'https://jankawulok.com'),
 ];

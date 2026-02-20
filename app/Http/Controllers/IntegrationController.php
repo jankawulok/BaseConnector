@@ -14,6 +14,15 @@ class IntegrationController extends Controller
    */
   public function handleRequest($integrationId, Request $request)
   {
+    // Connectivity test or manual browse check
+    if ($request->isMethod('get')) {
+      return response()->json([
+        'error' => true,
+        'error_code' => 'no_password',
+        'error_text' => 'Integration active. Use POST for API communications.'
+      ]);
+    }
+
     // Validate 'bl_pass' against integration's API key
     $integration = Integration::findOrFail($integrationId);
     if ($request->input('bl_pass') !== $integration->api_key) {
@@ -56,15 +65,13 @@ class IntegrationController extends Controller
   private function supportedMethods()
   {
     return response()->json([
-      'methods' => [
-        'SupportedMethods',
-        'FileVersion',
-        'ProductsCategories',
-        'ProductsList',
-        'ProductsData',
-        'ProductsPrices',
-        'ProductsQuantity'
-      ]
+      'SupportedMethods',
+      'FileVersion',
+      'ProductsCategories',
+      'ProductsList',
+      'ProductsData',
+      'ProductsPrices',
+      'ProductsQuantity'
     ]);
   }
 
@@ -73,7 +80,11 @@ class IntegrationController extends Controller
    */
   private function fileVersion()
   {
-    return response()->json(['file_version' => '1.0.0']);
+    return response()->json([
+      'platform' => 'BaseConnector',
+      'version' => '1.1.0',
+      'standard' => 4
+    ]);
   }
 
   /**
@@ -82,7 +93,14 @@ class IntegrationController extends Controller
   private function productsCategories($integrationId)
   {
     $categories = Category::where('integration_id', $integrationId)->get();
-    return response()->json($categories->mapWithKeys(fn($c) => [ $c->id =>$c->name]));
+
+    $categoryData = [];
+    foreach ($categories as $c) {
+      $categoryData[(string) $c->id] = $c->name;
+    }
+
+    // Using (object) to handle cases where all IDs are numeric and sequential
+    return response()->json((object) $categoryData);
   }
 
   /**
@@ -94,8 +112,8 @@ class IntegrationController extends Controller
 
     // Apply filters
     if ($request->filled('category_id') && $request->input('category_id') != 'all') {
-        $categoryId = $request->input('category_id');
-        $query->whereHas('categories', fn($q) => $q->where('id', $categoryId));
+      $categoryId = $request->input('category_id');
+      $query->whereHas('categories', fn($q) => $q->where('id', $categoryId));
     }
     if ($request->filled('filter_id')) {
       $query->where('id', $request->input('filter_id'));
@@ -138,91 +156,121 @@ class IntegrationController extends Controller
     $perPage = $request->input('filter_limit', 200);
     $products = $query->paginate($perPage, ['*'], 'page', $page);
 
-    $productData = $products->mapWithKeys(fn($p) => [
-      $p->id => [
+    $productData = [];
+    foreach ($products as $p) {
+      $productData[(string) $p->id] = [
         'name' => $p->name,
-        'quantity' => $p->quantity,
-        'price' => $p->price,
+        'quantity' => (int) $p->quantity,
+        'price' => number_format($p->price, 2, '.', ''),
         'sku' => $p->sku,
         'location' => $p->location,
         'currency' => $p->currency,
-      ]
-    ]);
-    $productData['pages'] = $products->lastPage();
+      ];
+    }
+    $productData['pages'] = (int) $products->lastPage();
 
-    return response()->json( $productData);
+    return response()->json($productData);
   }
 
   /**
    * Return detailed product data.
    */
   private function productsData($integrationId, Request $request)
-{
+  {
     $productsId = explode(',', $request->input('products_id'));
 
     // Retrieve products based on `integration_id` and specified product IDs
     $products = Product::where('integration_id', $integrationId)
-        ->whereIn('id', $productsId)
-        ->with('categories')  // Load categories to access category_id and name
-        ->get();
+      ->whereIn('id', $productsId)
+      ->with('categories')  // Load categories to access category_id and name
+      ->get();
 
     // Return error response if no products found
     if ($products->isEmpty()) {
-        return response()->json([
-            'error' => true,
-            'error_code' => 'not_found',
-            'error_text' => 'Product not found'
-        ], 404);
+      return response()->json([
+        'error' => true,
+        'error_code' => 'not_found',
+        'error_text' => 'Product not found'
+      ], 404);
     }
 
-    // Map response format based on Baselinker requirements
-    return response()->json(
-        $products->mapWithKeys(function ($product) {
-            return [
-                $product->id => [
-                    'name' => $product->name,
-                    'sku' => $product->sku,
-                    'ean' => $product->ean,
-                    'quantity' => $product->quantity,
-                    'price' => $product->price,
-                    'currency' => $product->currency,
-                    'tax' => $product->tax,
-                    'weight' => $product->weight,
-                    'height' => $product->height,
-                    'length' => $product->length,
-                    'width' => $product->width,
-                    'description' => $product->description,
-                    'description_extra1' => $product->description_extra1,
-                    'description_extra2' => $product->description_extra2,
-                    'description_extra3' => $product->description_extra3,
-                    'description_extra4' => $product->description_extra4,
-                    'man_name' => $product->man_name,
-                    'category_id' => optional($product->categories->first())->id,  // Only one category ID
-                    'category_name' => optional($product->categories->first())->name,
-                    'location' => $product->location,
-                    'url' => $product->url,
-                    'images' => $product->images,
-                    'features' => $product->features ?? [],  // Ensure features format: [["name", "value"], ...]
-                    'delivery_time' => $product->delivery_time,
-                    'variants' => $product->variants ?? []  // Ensure variants format with variant ID as keys
-                ]
-            ];
-        })
-    );
-}
+    $result = [];
+    foreach ($products as $product) {
+      $features = [];
+      if (is_array($product->features)) {
+        foreach ($product->features as $f) {
+          $name = $f['name'] ?? ($f[0] ?? '');
+          $value = $f['value'] ?? ($f[1] ?? '');
+          if ($name !== '') {
+            $features[] = [$name, $value];
+          }
+        }
+      }
+
+      $variants = [];
+      if (is_array($product->variants)) {
+        foreach ($product->variants as $vId => $vData) {
+          $variants[(string) $vId] = $vData;
+        }
+      }
+
+      $result[(string) $product->id] = [
+        'name' => $product->name,
+        'sku' => $product->sku,
+        'ean' => $product->ean,
+        'quantity' => (int) $product->quantity,
+        'price' => number_format($product->price, 2, '.', ''),
+        'currency' => $product->currency,
+        'tax' => (int) $product->tax,
+        'weight' => (float) $product->weight,
+        'height' => (float) $product->height,
+        'length' => (float) $product->length,
+        'width' => (float) $product->width,
+        'description' => $product->description,
+        'description_extra1' => $product->description_extra1,
+        'description_extra2' => $product->description_extra2,
+        'description_extra3' => $product->description_extra3,
+        'description_extra4' => $product->description_extra4,
+        'man_name' => $product->man_name,
+        'category_id' => (string) optional($product->categories->first())->id,
+        'category_name' => optional($product->categories->first())->name,
+        'location' => $product->location,
+        'url' => $product->url,
+        'images' => $product->images ?: [],
+        'features' => $features,
+        'delivery_time' => (int) $product->delivery_time,
+        'variants' => (object) $variants
+      ];
+    }
+
+    return response()->json((object) $result);
+  }
 
   /**
    * Return product prices.
    */
   private function productsPrices($integrationId, Request $request)
   {
-    $productIds = $request->input('product_ids', []);
-    $prices = Product::where('integration_id', $integrationId)
-      ->whereIn('id', $productIds)
-      ->get(['id', 'price']);
+    $query = Product::where('integration_id', $integrationId);
 
-    $priceData = $prices->mapWithKeys(fn($p) => [$p->id => $p->price]);
-    return response()->json(['prices' => $priceData]);
+    $page = $request->input('page', 1);
+    $products = $query->paginate(500, ['*'], 'page', $page);
+
+    $priceData = [];
+    foreach ($products as $p) {
+      $data = ['0' => number_format($p->price, 2, '.', '')];
+      if ($p->variants) {
+        foreach ($p->variants as $vId => $vData) {
+          $data[(string) $vId] = number_format($vData['price'] ?? $p->price, 2, '.', '');
+        }
+      }
+      // Use (object) to force json_encode to output an object {"0": "...", "vId": "..."}
+      // instead of a numerical array ["...", "..."] which would loose IDs.
+      $priceData[(string) $p->id] = (object) $data;
+    }
+
+    $priceData['pages'] = (int) $products->lastPage();
+    return response()->json($priceData);
   }
 
   /**
@@ -230,12 +278,24 @@ class IntegrationController extends Controller
    */
   private function productsQuantity($integrationId, Request $request)
   {
-    $productIds = $request->input('product_ids', []);
-    $quantities = Product::where('integration_id', $integrationId)
-      ->whereIn('id', $productIds)
-      ->get(['id', 'quantity']);
+    $query = Product::where('integration_id', $integrationId);
 
-    $quantityData = $quantities->mapWithKeys(fn($p) => [$p->id => $p->quantity]);
-    return response()->json(['quantities' => $quantityData]);
+    $page = $request->input('page', 1);
+    $products = $query->paginate(500, ['*'], 'page', $page);
+
+    $quantityData = [];
+    foreach ($products as $p) {
+      $data = ['0' => (int) $p->quantity];
+      if ($p->variants) {
+        foreach ($p->variants as $vId => $vData) {
+          $data[(string) $vId] = (int) ($vData['quantity'] ?? 0);
+        }
+      }
+      // Using (object) is CRITICAL here to preserve "0" and variant IDs as keys.
+      $quantityData[(string) $p->id] = (object) $data;
+    }
+
+    $quantityData['pages'] = (int) $products->lastPage();
+    return response()->json($quantityData);
   }
 }
