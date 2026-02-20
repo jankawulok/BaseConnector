@@ -6,6 +6,7 @@ use App\Models\Integration;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class IntegrationController extends Controller
 {
@@ -14,58 +15,87 @@ class IntegrationController extends Controller
    */
   public function handleRequest($integrationId, Request $request)
   {
+    // Debug: log incoming request
+    if (config('app.debug')) {
+      Log::debug('BaseLinker API Request', [
+        'integration_id' => $integrationId,
+        'method' => $request->method(),
+        'action' => $request->input('action'),
+        'post' => $request->except('bl_pass'),
+      ]);
+    }
+
     // Connectivity test or manual browse check
     if ($request->isMethod('get')) {
-      return response()->json([
+      return $this->debugResponse(response()->json([
         'error' => true,
         'error_code' => 'no_password',
         'error_text' => 'Integration active. Use POST for API communications.'
-      ]);
+      ]));
     }
 
     // Blank POST = connectivity check from BaseLinker
     if (!$request->filled('bl_pass') && !$request->filled('action')) {
-      return response()->json([
+      return $this->debugResponse(response()->json([
         'platform' => 'BaseConnector',
         'version' => '1.1.0',
         'standard' => 4
-      ]);
+      ]));
     }
 
     // Validate 'bl_pass' against integration's API key
     $integration = Integration::findOrFail($integrationId);
     if ($request->input('bl_pass') !== $integration->api_key) {
-      return response()->json([
+      return $this->debugResponse(response()->json([
         'error' => true,
         'error_code' => 'invalid_bl_pass',
         'error_text' => 'Invalid API key'
-      ], 403);
+      ], 403));
     }
 
     // Determine action and call the corresponding method
     $action = $request->input('action');
     switch ($action) {
       case 'SupportedMethods':
-        return $this->supportedMethods();
+        return $this->debugResponse($this->supportedMethods());
       case 'FileVersion':
-        return $this->fileVersion();
+        return $this->debugResponse($this->fileVersion());
       case 'ProductsCategories':
-        return $this->productsCategories($integrationId);
+        return $this->debugResponse($this->productsCategories($integrationId));
       case 'ProductsList':
-        return $this->productsList($integrationId, $request);
+        return $this->debugResponse($this->productsList($integrationId, $request));
       case 'ProductsData':
-        return $this->productsData($integrationId, $request);
+        return $this->debugResponse($this->productsData($integrationId, $request));
       case 'ProductsPrices':
-        return $this->productsPrices($integrationId, $request);
+        return $this->debugResponse($this->productsPrices($integrationId, $request));
       case 'ProductsQuantity':
-        return $this->productsQuantity($integrationId, $request);
+        return $this->debugResponse($this->productsQuantity($integrationId, $request));
       default:
-        return response()->json([
+        return $this->debugResponse(response()->json([
           'error' => true,
           'error_code' => 'invalid_action',
           'error_text' => 'Invalid action'
-        ], 400);
+        ], 400));
     }
+  }
+
+  /**
+   * Log API response when APP_DEBUG is true.
+   */
+  private function debugResponse($response)
+  {
+    if (config('app.debug')) {
+      $content = $response->getContent();
+      // Truncate large responses to keep logs manageable
+      $preview = mb_strlen($content) > 2000
+        ? mb_substr($content, 0, 2000) . '... [truncated]'
+        : $content;
+      Log::debug('BaseLinker API Response', [
+        'status' => $response->getStatusCode(),
+        'body' => $preview,
+      ]);
+    }
+    return $response;
   }
 
   /**
@@ -172,6 +202,7 @@ class IntegrationController extends Controller
         'quantity' => (int) $p->quantity,
         'price' => number_format($p->price, 2, '.', ''),
         'sku' => $p->sku,
+        'ean' => $p->ean,
         'location' => $p->location,
         'currency' => $p->currency,
       ];
