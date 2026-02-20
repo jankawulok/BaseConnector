@@ -23,6 +23,15 @@ class IntegrationController extends Controller
       ]);
     }
 
+    // Blank POST = connectivity check from BaseLinker
+    if (!$request->filled('bl_pass') && !$request->filled('action')) {
+      return response()->json([
+        'platform' => 'BaseConnector',
+        'version' => '1.1.0',
+        'standard' => 4
+      ]);
+    }
+
     // Validate 'bl_pass' against integration's API key
     $integration = Integration::findOrFail($integrationId);
     if ($request->input('bl_pass') !== $integration->api_key) {
